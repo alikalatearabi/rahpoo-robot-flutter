@@ -1,0 +1,51 @@
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.example.selfchassislibrary"
+    compileSdkVersion rootProject.ext.android.compileSdkVersion
+    buildToolsVersion rootProject.ext.android.buildToolsVersion
+    defaultConfig {
+        defaultConfig {
+            multiDexEnabled true
+            minSdkVersion rootProject.ext.android.minSdkVersion
+            targetSdkVersion rootProject.ext.android.targetSdkVersion
+            versionCode rootProject.ext.android.selfChassisLibraryVersionCode
+            versionName rootProject.ext.android.selfChassisLibraryersionName
+
+            testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+            consumerProguardFiles 'consumer-rules.pro'
+        }
+
+        buildTypes {
+            release {
+                minifyEnabled false
+                proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            }
+        }
+
+    }
+
+    repositories {
+        maven { url 'https://jitpack.io' }
+    }
+
+
+}
+dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1'
+
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+
+    //websocket、http相关
+    implementation rootProject.ext.dependencies.okhttp
+    implementation 'com.squareup.okio:okio:1.15.0'
+    //json解析框架
+    implementation rootProject.ext.dependencies.gson
+    // 工具类
+//        api rootProject.ext.dependencies.utilcode
+    implementation rootProject.ext.dependencies.eventbus
+
+    implementation 'com.blankj:utilcodex:1.30.6'
+}
