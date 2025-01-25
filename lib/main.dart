@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'tile1_widget.dart';
 
+
 void main() async {
-  // await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
@@ -129,13 +129,22 @@ class MainPage extends StatelessWidget {
             onPressed: () async {
               if (number == "01") {
                 // Example: Connect to chassis
-                String connectionResult = await RobotChannel.connectChassis(
-                    'ws://192.168.20.22:9090');
-                print(connectionResult);
+                // String connectionResult = await RobotChannel.connectChassis(
+                //     'ws://192.168.20.22:9090');
+                // print(connectionResult);
 
-                // Request robot status
-                await RobotChannel.setVelocity(0.5, 0); // Rotate left
-                print('Moving left');
+                // // // Request robot status
+                // // // await RobotChannel.setVelocity(0.5, 0); // Rotate left
+                // // // print('Moving left');
+
+                // // // Request the map
+                // await RobotChannel.getMap();
+                // print('Map requested');
+
+                // // Move to a marker
+                // await RobotChannel.moveToMarker('Ali Seat');
+                // print('Moving to Marker1');
+
                 if (context != null) {
                   Navigator.push(
                     context,
@@ -200,6 +209,15 @@ class RobotChannel {
       await platform.invokeMethod('setVelocity', {'z': z, 'x': x});
     } catch (e) {
       print('Error setting velocity: $e');
+    }
+  }
+
+  static Future<void> getMap() async {
+    try {
+      await platform.invokeMethod('getMap');
+      print('Map requested');
+    } catch (e) {
+      print('Error: $e');
     }
   }
 }
