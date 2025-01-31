@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:smart_robot/RobotMovePage.dart';
+import 'package:smart_robot/tile2_widget.dart';
 import 'tile1_widget.dart';
-
 
 void main() async {
   runApp(const MyApp());
@@ -41,16 +42,18 @@ class MainPage extends StatelessWidget {
                 children: [
                   _buildCard(
                     "01",
-                    "بیا با هم صحبت کنیم",
+                    "فرمان حرکتی",
                     const Color(0xFFEEEEEE),
-                    Icons.mic, // Microphone icon
-                    context, // Correct context passed here
+                    Icons.navigation,
+                    context,
                   ),
                   // Card 2
                   _buildCard(
                     "02",
-                    "EXPERT KUBERNETES SETUP AND MAINTENANCE",
+                    "بیا با هم صحبت کنیم",
                     const Color(0xFF0A0E1A),
+                    Icons.mic,
+                    context,
                   ),
                   // Card 3
                   _buildCard(
@@ -76,7 +79,7 @@ class MainPage extends StatelessWidget {
                 color: const Color(0xFFFF7645), // Banner color
                 alignment: Alignment.center,
                 child: const Text(
-                  "Scale your business with a reliable and efficient IT-infrastructure",
+                  "Rahpoo",
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -128,28 +131,19 @@ class MainPage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               if (number == "01") {
-                // Example: Connect to chassis
-                // String connectionResult = await RobotChannel.connectChassis(
-                //     'ws://192.168.20.22:9090');
-                // print(connectionResult);
-
-                // // // Request robot status
-                // // // await RobotChannel.setVelocity(0.5, 0); // Rotate left
-                // // // print('Moving left');
-
-                // // // Request the map
-                // await RobotChannel.getMap();
-                // print('Map requested');
-
-                // // Move to a marker
-                // await RobotChannel.moveToMarker('Ali Seat');
-                // print('Moving to Marker1');
-
                 if (context != null) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                         builder: (context) => const Tile1Widget()),
+                  );
+                }
+              } else if (number == "02") {
+                if (context != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const Tile2Widget()),
                   );
                 }
               }

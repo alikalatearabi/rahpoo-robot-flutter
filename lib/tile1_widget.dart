@@ -1,14 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'dart:convert';
+import 'package:smart_robot/client.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:smart_robot/client.dart';
-import 'package:smart_robot/main.dart';
-import 'package:smart_robot/message.dart';
-import 'package:wifi_iot/wifi_iot.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -22,15 +20,18 @@ class Tile1Widget extends StatefulWidget {
 class _Tile1WidgetState extends State<Tile1Widget> {
   bool isRecording = false;
   bool isLoading = false;
+  String robotStatus = "Disconnected"; // Status of robot connection
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
   String? recordedFilePath;
-
   List<Message> messages = [];
+  late WebSocketChannel channel;
+  bool isRegistered = false;
 
   @override
   void initState() {
     super.initState();
     _initializeRecorder();
+    _connectWebSocket();
   }
 
   Future<void> _initializeRecorder() async {
@@ -39,6 +40,80 @@ class _Tile1WidgetState extends State<Tile1Widget> {
       throw RecordingPermissionException('Microphone permission not granted');
     }
     await _recorder.openRecorder();
+  }
+
+  Future<void> _connectWebSocket() async {
+    try {
+      channel = WebSocketChannel.connect(
+        Uri.parse('ws://192.168.20.22:9090'),
+      );
+
+      setState(() {
+        robotStatus = "Connected";
+      });
+
+      // Listen for messages from the WebSocket
+      channel.stream.listen(
+        (message) {
+          final data = jsonDecode(message);
+          print("Message from WebSocket: $data");
+        },
+        onError: (error) {
+          setState(() {
+            robotStatus = "Connection Failed";
+          });
+          print("WebSocket Error: $error");
+        },
+        onDone: () {
+          setState(() {
+            robotStatus = "Disconnected";
+          });
+          print("WebSocket connection closed");
+        },
+      );
+
+      // Register the topic (advertise)
+      // _registerTopic();
+    } catch (e) {
+      setState(() {
+        robotStatus = "Connection Failed";
+      });
+      print("WebSocket Connection Error: $e");
+    }
+  }
+
+  void _registerTopic(String place) {
+    final advertiseCommand = {
+      "args": {"poi": place},
+      "id": "service_poi",
+      "service": "/poi",
+      "op": "call_service"
+    };
+
+    channel.sink.add(jsonEncode(advertiseCommand));
+    setState(() {
+      isRegistered = true;
+    });
+    print("Sent Advertise Command: ${jsonEncode(advertiseCommand)}");
+  }
+
+  Future<void> moveRobot(String place) async {
+    // if (!isRegistered) {
+    //   print("Topic not registered. Cannot send command.");
+    //   return;
+    // }
+
+    final publishCommand = {
+      {
+        "args": {"poi": "Ali Seat"},
+        "id": "service_poi",
+        "service": "/poi",
+        "op": "call_service"
+      }
+    };
+
+    channel.sink.add(jsonEncode(publishCommand));
+    print("Sent Publish Command: ${jsonEncode(publishCommand)}");
   }
 
   Future<void> _startRecording() async {
@@ -57,13 +132,6 @@ class _Tile1WidgetState extends State<Tile1Widget> {
     recordedFilePath = filePath;
   }
 
-  Future<void> moveRobot(String place) async {
-    const url = 'ws://192.168.20.22:9090';
-    var markerName = place;
-
-    await RobotChannel.checkAndMove(url, markerName);
-  }
-
   Future<void> _stopRecording() async {
     if (isRecording) {
       await _recorder.stopRecorder();
@@ -79,7 +147,6 @@ class _Tile1WidgetState extends State<Tile1Widget> {
     });
 
     try {
-      // Step 1: Upload the recorded file to AIPAA API
       if (recordedFilePath == null) {
         print('No recorded file to send');
         return;
@@ -88,23 +155,28 @@ class _Tile1WidgetState extends State<Tile1Widget> {
       final apiResponse = await _callAIPAAApi(recordedFilePath!);
       print(apiResponse);
 
-      // Add user's input to the messages list
       setState(() {
         messages.add(Message(text: "User: [Voice Recording]", isUser: true));
       });
 
-      await Future.delayed(const Duration(seconds: 10));
-
       if (apiResponse != null) {
-        // Add API's response to the messages list
         setState(() {
           messages.add(Message(text: "Bot: $apiResponse", isUser: false));
         });
 
         if (apiResponse.contains('علی')) {
-          moveRobot('Ali Seat');
+          _registerTopic('Ali Seat');
         } else if (apiResponse.contains('شارژر')) {
-          moveRobot('Charger');
+          _registerTopic('Charger');
+        }
+        if (apiResponse.contains('علی')) {
+          _registerTopic('Ali Seat');
+        } else if (apiResponse.contains('در ورودی')) {
+          _registerTopic('Main Entrance');
+        } else if (apiResponse.contains('میز یک')) {
+          _registerTopic('Desk 1');
+        } else if (apiResponse.contains('در مدیر')) {
+          _registerTopic('Manager Door');
         } else {
           print('No action required');
         }
@@ -147,7 +219,7 @@ class _Tile1WidgetState extends State<Tile1Widget> {
       if (response.statusCode == 200) {
         final responseData = await response.stream.bytesToString();
         final jsonResponse = json.decode(responseData);
-        return jsonResponse['results']; // Assuming 'text' contains the response
+        return jsonResponse['results'];
       } else {
         print('API call failed with status: ${response.statusCode}');
         return null;
@@ -160,6 +232,7 @@ class _Tile1WidgetState extends State<Tile1Widget> {
 
   @override
   void dispose() {
+    channel.sink.close();
     _recorder.closeRecorder();
     super.dispose();
   }
@@ -174,12 +247,27 @@ class _Tile1WidgetState extends State<Tile1Widget> {
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.black,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Chip(
+              label: Text(
+                robotStatus,
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: robotStatus == "Connected"
+                  ? Colors.green
+                  : robotStatus == "Connection Failed"
+                      ? Colors.red
+                      : Colors.grey,
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [
           ListView.builder(
-            padding: const EdgeInsets.only(
-                bottom: 100), // Add padding for the buttons
+            padding: const EdgeInsets.only(bottom: 100),
             itemCount: messages.length,
             itemBuilder: (context, index) {
               final message = messages[index];
@@ -248,18 +336,9 @@ class _Tile1WidgetState extends State<Tile1Widget> {
   }
 }
 
-class RobotChannel {
-  static const platform = MethodChannel('com.example.robot');
+class Message {
+  final String text;
+  final bool isUser;
 
-  static Future<void> checkAndMove(String url, String markerName) async {
-    try {
-      final result = await platform.invokeMethod('checkAndMove', {
-        'url': url,
-        'markerName': markerName,
-      });
-      print(result); // Success message
-    } catch (e) {
-      print("Error: $e"); // Error message
-    }
-  }
+  Message({required this.text, required this.isUser});
 }
