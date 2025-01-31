@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_robot/RobotMovePage.dart';
-import 'package:smart_robot/tile2_widget.dart';
+import 'package:smart_robot/screens/tile2_widget.dart';
 import 'tile1_widget.dart';
 
 void main() async {
